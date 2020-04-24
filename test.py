@@ -10,7 +10,7 @@ def scrape_url():
         "Accept-Language": "en-US,en;q=0.5",
         "Accept-Encoding": "gzip, deflate, br",
         "Referer": "https://www.*******.com/******/data?after=2019-10-23T21:00:00.000Z",
-        "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnRfaWQiOiJlZmEyYzFmZjI2MWFiYWZhZTMwNDgxY2I0YTFiZGQwZjUxN2U3MDUzN2EyOWJhMDE3OGFmMmIxNmRkMTFlZjlhIiwic2NvcGUiOiJhbGVydCBpbmZyYXN0cnVjdHVyZSBjcG8tdHggZW1zcC10eCB0eC1ub3RpZmljYXRpb24gdGFzayBkYXRhdml6IHJlcG9ydGluZyIsImdyb3VwcyI6WyJXRUJIRUxQIl0sInByZWZlcmVuY2VzIjp7Imxhbmd1YWdlIjoiZW4tVVMiLCJsb2dvIjoidG90YWwucG5nIiwidGhlbWUiOiJ0b3RhbC10aGVtZSJ9LCJpYXQiOjE1ODc3NDk5ODksImV4cCI6MTU4Nzc3MTU4OSwiYXVkIjoiZzJzbWFydC5jb20iLCJpc3MiOiJnMnNtYXJ0LXdlYm1nciIsInN1YiI6InVzZXIvMjI0NTIxMjE4In0.FeALh8MjkmMjRrXBm1VjzA_Y8v5d__LbfTSqO8JhAeJgSfWRn9dQqEJoWlZktP6btPKDorpL4Wr67vh4RNMywdli7WjY-kR4bqRQdbE6kMbdxN7X__CKiysVhZcEwUHO2UAEk5sDEuRRkwfzwPRMqZsrxJZ_ge3P7B248IvwEU0UBCgxpb9YEj8PbR4kjhzm0MTvgv8319m_-DkasebuK6L7GQbkS6RIN9pGTZD1X8TGsekrsu7hvPxjv5NmDEuz86K2Vv83HDLzJz-p6ykHGdPGGzTQ2A8aEFjllhcPHq6UeIM-smRECZ6PI9jwP5M1APPTykpUR5DyQ8qvH5FWXg",
+        "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnRfaWQiOiJlZmEyYzFmZ",
         "Connection": "keep-alive",
     }
 
