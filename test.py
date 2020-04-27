@@ -44,7 +44,7 @@ class G2SmartBot:
         print(self.resp)
 
     def parse_url(self):
-        """Parses the url and adds specified parameters to dic, num = pages to parse"""
+        """Parses the url and adds specified parameters to dic"""
         self.resp = requests.get(
             os.getenv("url")
             + self.cpo["Location"][self.location]
