@@ -33,6 +33,11 @@ class G2SmartBot:
     
         self.time = pytz.utc.localize(datetime.now())
         self.headers = {
+            "Host": "www.g2smart.com",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:76.0) Gecko/20100101 Firefox/76.0",
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate, br",
             "Authorization": os.getenv("token"),
             "Connection": "keep-alive",
         }
