@@ -8,6 +8,7 @@ from firebase_admin import credentials, firestore
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+
 env_path = Path("C:\\Users\\DayDream\\total") / '.env'
 load_dotenv(dotenv_path=env_path)
 
@@ -24,14 +25,12 @@ class G2SmartBot:
         self.doc = self.doc_ref.get()
         self.dic = {}
         self.location = ""
+        self.time = pytz.utc.localize(datetime.now())
         self.cpo = {"Location":
             {"HPC France": "cpo=total_fr_hpc",
-            "HPC Netherlands": "cpo=otal_nl_hpc",
+            "HPC Netherlands": "cpo=total_nl_hpc",
             "TE61": "cpo=te61"}
             }
-        
-    
-        self.time = pytz.utc.localize(datetime.now())
         self.headers = {
             "Host": "www.g2smart.com",
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:76.0) Gecko/20100101 Firefox/76.0",
@@ -59,14 +58,16 @@ class G2SmartBot:
         )
         for i in self.resp.json()["items"]:
             if datetime.fromisoformat(
-                i["openDate"].replace('Z', '+00:00')).astimezone() > self.time - timedelta(days=1):
+                i["openDate"].replace('Z', '+00:00')
+                ).astimezone() > self.time - timedelta(days=1):
                 if i["initiatorEvent"]["type"] != "STATUS_NOTIFICATION":
                     self.dic[i["_id"]] = {
                         "Location": i["locationName"],
                         "Charger": i["equipmentId"],
                         "Alert_Status": i["status"],
                         "Open_Date": datetime.fromisoformat(
-                            i["openDate"].replace('Z', '+00:00')).astimezone(),
+                            i["openDate"].replace('Z', '+00:00')
+                            ).astimezone(),
                         "Alert_Details": i["initiatorEvent"]["type"]
                     }
                 else:
@@ -75,7 +76,8 @@ class G2SmartBot:
                         "Charger": i["equipmentId"],
                         "Alert_Status": i["status"],
                         "Open_Date": datetime.fromisoformat(
-                            i["openDate"].replace('Z', '+00:00')).astimezone(),
+                            i["openDate"].replace('Z', '+00:00')
+                            ).astimezone(),
                         "Alert_Details": i["initiatorEvent"]["details"]["status"]
                     }
         
