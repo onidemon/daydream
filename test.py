@@ -54,7 +54,7 @@ class G2SmartBot:
         )
         for i in self.resp.json()["items"]:
             if datetime.fromisoformat(
-                i["openDate"].replace('Z', '+00:00')).astimezone() > s.time - timedelta(days=1):
+                i["openDate"].replace('Z', '+00:00')).astimezone() > self.time - timedelta(days=1):
                 if i["initiatorEvent"]["type"] != "STATUS_NOTIFICATION":
                     self.dic[i["_id"]] = {
                         "Location": i["locationName"],
@@ -106,7 +106,7 @@ class G2SmartBot:
 
         # Section Text
         with open("temp.txt", "w+") as tmp:
-            for key in s.dic.keys():
+            for key in self.dic.keys():
                 print(
                     f'{self.dic[key]["Location"]} '
                     f'{str(self.dic[key]["Open_Date"])[0:19]} '
