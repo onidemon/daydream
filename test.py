@@ -1,75 +1,62 @@
-import requests
-import json
-import pymsteams
+import os
 from datetime import datetime, timedelta
+import requests
+import pymsteams
 import pytz
 import firebase_admin
 from firebase_admin import credentials, firestore
-from pathlib import Path
 from dotenv import load_dotenv
-import os
 
-env_path = Path("C:\\Users\\DayDream\\total") / '.env'
-load_dotenv(dotenv_path=env_path)
+load_dotenv()
 
-cred = credentials.Certificate("C:\\Users\\DayDream\\firestore_key.json")
+cred = credentials.Certificate(os.getenv("fire_key"))
 firebase_admin.initialize_app(cred)
 
 
 class G2SmartBot:
     """Bot that fetches alerts from G2Smart page"""
 
-    def __init__(self):
-        self.db = firestore.client()
-        self.doc_ref = self.db.collection("Alerts").document("France")
-        self.doc = self.doc_ref.get()
-        self.dic = {}
+    def __init__(self,):
+        # self.location = ""
         self.location = ""
+        self.dic = {}
         self.time = pytz.utc.localize(datetime.now())
-        self.cpo = {"Location":
-            {"HPC France": "cpo=total_fr_hpc",
+        self.cpo = {
+            "HPC France": "cpo=total_fr_hpc",
             "HPC Netherlands": "cpo=total_nl_hpc",
-            "TE61": "cpo=te61"}
-            }
-        self.headers = {
+            "TE61": "cpo=te61",
+        }
+
+    def parse_url(self, loc=None):
+        """Parses the url and adds specified parameters to dic"""
+        self.location = loc
+        headers = {
             "Host": "www.g2smart.com",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" 
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.113 Safari/537.36",
             "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Accept-Encoding": "gzip, deflate, br",
+            "Referer": "https://www.g2smart.com/g2smart/alert?status=Opened",
             "Authorization": os.getenv("token"),
             "Connection": "keep-alive",
         }
-        self.resp = requests.get(
-            os.getenv("url")
-            + "status=Opened&limit=50&page=1",
-            headers=self.headers,
+        ses = requests.session()
+        resp = ses.get(
+            os.getenv("url") + self.cpo[loc] + "&" + "status=Opened&limit=50&page=1",
+            headers=headers,
         )
-        print(self.resp)
-
-    def parse_url(self):
-        """Parses the url and adds specified parameters to dic"""
-        self.resp = requests.get(
-            os.getenv("url")
-            + self.cpo["Location"][self.location]
-            +"&"
-            + "status=Opened&limit=50&page=1",
-            headers=self.headers,
-        )
-        for i in self.resp.json()["items"]:
+        for i in resp.json()["items"]:
             if datetime.fromisoformat(
-                i["openDate"].replace('Z', '+00:00')
-                ).astimezone() > self.time - timedelta(days=1):
+                i["openDate"].replace("Z", "+00:00")
+            ).astimezone() > self.time - timedelta(days=1):
                 if i["initiatorEvent"]["type"] != "STATUS_NOTIFICATION":
                     self.dic[i["_id"]] = {
                         "Location": i["locationName"],
                         "Charger": i["equipmentId"],
                         "Alert_Status": i["status"],
                         "Open_Date": datetime.fromisoformat(
-                            i["openDate"].replace('Z', '+00:00')
-                            ).astimezone(),
-                        "Alert_Details": i["initiatorEvent"]["type"]
+                            i["openDate"].replace("Z", "+00:00")
+                        ).astimezone(),
+                        "Alert_Details": i["initiatorEvent"]["type"],
                     }
                 else:
                     self.dic[i["_id"]] = {
@@ -77,29 +64,30 @@ class G2SmartBot:
                         "Charger": i["equipmentId"],
                         "Alert_Status": i["status"],
                         "Open_Date": datetime.fromisoformat(
-                            i["openDate"].replace('Z', '+00:00')
-                            ).astimezone(),
-                        "Alert_Details": i["initiatorEvent"]["details"]["status"]
+                            i["openDate"].replace("Z", "+00:00")
+                        ).astimezone(),
+                        "Alert_Details": i["initiatorEvent"]["details"]["status"],
                     }
-        
-        # self.doc_ref.set(self.dic)
+        print(resp)
+        # print(self.dic)
 
-
-    def write_file(self):
-        """Dumps the contents of self.dic to a json file"""
-        with open("alerts.json", "w") as f:
-            json.dump(self.dic, f)
+    # def write_file(self):
+    #     """Dumps the contents of self.dic to a json file"""
+    #     print
+    #     with open("alerts.json", "w+") as f:
+    #         json.dump(self.dic, f)
 
     def send_to_teams(self):
         """sends retrieved alerts if any to MS Teams"""
-        teams_post = pymsteams.connectorcard(
-            os.getenv("teams")
-        )
+        data_base = firestore.client()
+        doc_ref = data_base.collection("Alerts").document(self.location)
+        doc = doc_ref.get()
+        teams_post = pymsteams.connectorcard(os.getenv("teams"))
         # create the section
         g2smart_section = pymsteams.cardsection()
 
         # Section Title
-        g2smart_section.title("G2 Open Alerts")
+        # g2smart_section.title("CPO:  " + self.location)
 
         # Activity Elements
         g2smart_section.activityTitle("CPO:  " + self.location)
@@ -114,15 +102,18 @@ class G2SmartBot:
 
         # Section Text
         with open("temp.txt", "w+") as tmp:
-            for key in self.dic.keys():
-                print(
-                    f'{self.dic[key]["Location"]} '
-                    f'{str(self.dic[key]["Open_Date"])[0:19]} '
-                    f'{self.dic[key]["Alert_Details"]} '
-                    f'{self.dic[key]["Charger"]} '
-                    f'{self.dic[key]["Alert_Status"][0:4]}\n',
-                    file=tmp,
-                )
+            for key in self.dic:
+                if doc.to_dict() is None or key not in doc.to_dict():
+                    print(
+                        f'{self.dic[key]["Location"]} '
+                        f'{str(self.dic[key]["Open_Date"])[0:19]} '
+                        f'{self.dic[key]["Alert_Details"]} '
+                        f'{self.dic[key]["Charger"]} '
+                        f'{self.dic[key]["Alert_Status"][0:4]}\n',
+                        file=tmp,
+                    )
+                else:
+                    print(f"{key} alread sent")
             tmp.seek(0)
             g2smart_section.text(tmp.read())
 
@@ -131,8 +122,7 @@ class G2SmartBot:
 
         # Add section to the connector card object before sending
         teams_post.addSection(g2smart_section)
-        teams_post.text("Test")
-        self.dic = {}
+        teams_post.text("G2 Open Alerts")
 
         with open("temp.txt", "r+") as read_obj:
             one_char = read_obj.read(1)
@@ -140,13 +130,12 @@ class G2SmartBot:
                 print("empty")
             else:
                 teams_post.send()
+        doc_ref.set(self.dic)
+        self.dic = {}
 
 
 s = G2SmartBot()
-s.location = "TE61"
-s.parse_url()
+s.parse_url("TE61")
 s.send_to_teams()
-s.location = "HPC France"
-s.parse_url()
+s.parse_url("HPC France")
 s.send_to_teams()
-
