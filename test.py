@@ -17,7 +17,6 @@ class G2SmartBot:
     """Bot that fetches alerts from G2Smart page"""
 
     def __init__(self,):
-        # self.location = ""
         self.location = ""
         self.dic = {}
         self.time = pytz.utc.localize(datetime.now())
@@ -69,7 +68,6 @@ class G2SmartBot:
                         "Alert_Details": i["initiatorEvent"]["details"]["status"],
                     }
         print(resp)
-        # print(self.dic)
 
     # def write_file(self):
     #     """Dumps the contents of self.dic to a json file"""
