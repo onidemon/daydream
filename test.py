@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime, timedelta
 import requests
 import pymsteams
@@ -6,6 +7,7 @@ import pytz
 import firebase_admin
 from firebase_admin import credentials, firestore
 from dotenv import load_dotenv
+from refresh_token import get_refresh_token
 
 load_dotenv()
 
@@ -35,11 +37,16 @@ class G2SmartBot:
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.113 Safari/537.36",
             "Accept": "application/json, text/plain, */*",
             "Referer": "https://www.g2smart.com/g2smart/alert?status=Opened",
-            "Authorization": os.getenv("token"),
+            "Authorization": "Bearer "
+            + get_refresh_token(
+                os.getenv("client_id"),
+                os.getenv("client_secret"),
+                os.getenv("refresh_token"),
+            ),
             "Connection": "keep-alive",
         }
-        ses = requests.session()
-        resp = ses.get(
+        session = requests.session()
+        resp = session.get(
             os.getenv("url") + self.cpo[loc] + "&" + "status=Opened&limit=50&page=1",
             headers=headers,
         )
@@ -69,11 +76,10 @@ class G2SmartBot:
                     }
         print(resp)
 
-    # def write_file(self):
-    #     """Dumps the contents of self.dic to a json file"""
-    #     print
-    #     with open("alerts.json", "w+") as f:
-    #         json.dump(self.dic, f)
+    def write_json(self):
+        """Dumps the contents of self.dic to a json file"""
+        with open("alerts.json", "w+") as f:
+            json.dump(self.dic, f)
 
     def send_to_teams(self):
         """sends retrieved alerts if any to MS Teams"""
@@ -120,7 +126,7 @@ class G2SmartBot:
 
         # Add section to the connector card object before sending
         teams_post.addSection(g2smart_section)
-        teams_post.text("G2 Open Alerts")
+        teams_post.text("Open alerts")
 
         with open("temp.txt", "r+") as read_obj:
             one_char = read_obj.read(1)
@@ -128,7 +134,7 @@ class G2SmartBot:
                 print("empty")
             else:
                 teams_post.send()
-        doc_ref.set(self.dic)
+        doc_ref.set(self.dic, merge=True)
         self.dic = {}
 
 
