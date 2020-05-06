@@ -28,8 +28,8 @@ class Planner:
             "12-21": (datetime.time(12, 0, 0), datetime.time(21, 0, 0)),
             "10-14": (datetime.time(10, 0, 0), datetime.time(14, 0, 0)),
             "15-21": (datetime.time(15, 0, 0), datetime.time(21, 0, 0)),
-            "DO": None,
-            "CO": None,
+            "DO": (datetime.time(0, 0, 0), datetime.time(0, 0, 0)),
+            "CO": (datetime.time(0, 0, 0), datetime.time(0, 0, 0)),
         }
         self.fr_team = {
             self.sheet["D9"].value: {},
@@ -58,12 +58,12 @@ class Planner:
     def pick_random(self):
         """returns random member if currently has active shift"""
         for key in self.fr_team:
-            if (
-                    self.shifts[self.fr_team[key][self.today]][0]
-                    <= self.current_time2
-                    < self.shifts[self.fr_team[key][self.today]][1]
-            ):
-                self.rnd.append(key)
+                if (
+                        self.shifts[self.fr_team[key][self.today]][0]
+                        <= self.current_time2
+                        < self.shifts[self.fr_team[key][self.today]][1]
+                ):
+                    self.rnd.append(key)
         return random.choice(self.rnd)
 
 
