@@ -1,73 +1,145 @@
+import requests
+import json
+import pymsteams
+from datetime import datetime, timedelta
+import pytz
+import firebase_admin
+from firebase_admin import credentials, firestore
+from dotenv import load_dotenv
+import os
 
-"""Module to read excel sheet, make dict from schedule"""
-import datetime
-from datetime import timedelta
-import random
-from openpyxl import load_workbook
+load_dotenv(dotenv_path='C:\\vsprojects\\total\\g2\\.env')
+
+cred = credentials.Certificate("C:\\Users\\DayDream\\firestore_key.json")
+firebase_admin.initialize_app(cred)
 
 
-class Planner:
-    """gets team schedule from excel file and picks random active member"""
+class G2SmartBot:
+    """Bot that fetches alerts from G2Smart page"""
+
     def __init__(self):
-        self.workbook = load_workbook(
-            filename="/Users/adriansultu/vscodeprojects/learn_python/May.xlsx"
-        )
-        self.sheet = self.workbook.active
-        self.rnd = []
-        self.today = datetime.datetime.now().replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
-        self.now = datetime.datetime.now()
-        self.this_month = datetime.datetime(self.now.year, self.now.month, 1, hour=0, minute=0, second=0,)
-        self.current_time = datetime.time(
-            self.now.hour, self.now.minute, self.now.second
-        )
-        self.current_time2 = datetime.time(13, 30, 0)
-        self.shifts = {
-            "9-18": (datetime.time(9, 0, 0), datetime.time(18, 0, 0)),
-            "12-21": (datetime.time(12, 0, 0), datetime.time(21, 0, 0)),
-            "10-14": (datetime.time(10, 0, 0), datetime.time(14, 0, 0)),
-            "15-21": (datetime.time(15, 0, 0), datetime.time(21, 0, 0)),
-            "DO": (datetime.time(0, 0, 0), datetime.time(0, 0, 0)),
-            "CO": (datetime.time(0, 0, 0), datetime.time(0, 0, 0)),
+        self.db = firestore.client()
+        self.doc_ref = self.db.collection("Alerts").document("France")
+        self.doc = self.doc_ref.get()
+        self.dic = {}
+        self.ses = requests.session()
+        self.location = ""
+        self.time = pytz.utc.localize(datetime.now())
+        self.cpo = {"Location":
+            {"HPC France": "cpo=total_fr_hpc",
+            "HPC Netherlands": "cpo=total_nl_hpc",
+            "TE61": "cpo=te61"}
+            }
+        self.headers = {
+            "Host": "www.g2smart.com",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" 
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.113 Safari/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Referer": "https://www.g2smart.com/g2smart/alert?status=Opened",
+            "Authorization": os.getenv("token"),
+            "Connection": "keep-alive",
         }
-        self.fr_team = {
-            self.sheet["D9"].value: {},
-            self.sheet["D10"].value: {},
-            self.sheet["D11"].value: {},
-            self.sheet["D12"].value: {},
-            self.sheet["D13"].value: {},
-            self.sheet["D14"].value: {},
-        }
+        self.resp = self.ses.get(
+            os.getenv("url")
+            + "status=Opened&limit=50&page=1",
+            headers=self.headers,
+        )
+        print(self.resp)
 
-    def fetch_schedule(self):
-        """fill dict from excel sheet"""
-        row = 9
-        count = 0
-        while row < 15:
-            data = self.sheet["E" + str(row):"AI" + str(row)][0]
-            for i in data:
-                self.fr_team[self.sheet["D" + str(row)].value].update(
-                    {self.this_month: i.value}
+    def parse_url(self):
+        """Parses the url and adds specified parameters to dic"""
+        self.resp = self.ses.get(
+            os.getenv("url")
+            + self.cpo["Location"][self.location]
+            +"&"
+            + "status=Opened&limit=50&page=1",
+            headers=self.headers,
+        )
+        for i in self.resp.json()["items"]:
+            if datetime.fromisoformat(
+                i["openDate"].replace('Z', '+00:00')
+                ).astimezone() > self.time - timedelta(days=1):
+                if i["initiatorEvent"]["type"] != "STATUS_NOTIFICATION":
+                    self.dic[i["_id"]] = {
+                        "Location": i["locationName"],
+                        "Charger": i["equipmentId"],
+                        "Alert_Status": i["status"],
+                        "Open_Date": datetime.fromisoformat(
+                            i["openDate"].replace('Z', '+00:00')
+                            ).astimezone(),
+                        "Alert_Details": i["initiatorEvent"]["type"]
+                    }
+                else:
+                    self.dic[i["_id"]] = {
+                        "Location": i["locationName"],
+                        "Charger": i["equipmentId"],
+                        "Alert_Status": i["status"],
+                        "Open_Date": datetime.fromisoformat(
+                            i["openDate"].replace('Z', '+00:00')
+                            ).astimezone(),
+                        "Alert_Details": i["initiatorEvent"]["details"]["status"]
+                    }
+        
+        # self.doc_ref.set(self.dic)
+
+
+    def write_file(self):
+        """Dumps the contents of self.dic to a json file"""
+        with open("alerts.json", "w") as f:
+            json.dump(self.dic, f)
+
+    def send_to_teams(self):
+        """sends retrieved alerts if any to MS Teams"""
+        teams_post = pymsteams.connectorcard(
+            os.getenv("teams")
+        )
+        # create the section
+        g2smart_section = pymsteams.cardsection()
+
+        # Section Title
+        # g2smart_section.title("CPO:  " + self.location)
+
+        # Activity Elements
+        g2smart_section.activityTitle("CPO:  " + self.location)
+        # g2smart_section.activitySubtitle("Current open alerts")
+        g2smart_section.activityImage(
+            "https://emobilify.com/wp-content/uploads/company-logos/g2mobility.png"
+        )
+        # g2smart_section.activityText("This is my activity Text")
+
+        # Facts are key value pairs displayed in a list.
+        # g2smart_section.addFact("key", "value"')
+
+        # Section Text
+        with open("temp.txt", "w+") as tmp:
+            for key in self.dic.keys():
+                print(
+                    f'{self.dic[key]["Location"]} '
+                    f'{str(self.dic[key]["Open_Date"])[0:19]} '
+                    f'{self.dic[key]["Alert_Details"]} '
+                    f'{self.dic[key]["Charger"]} '
+                    f'{self.dic[key]["Alert_Status"][0:4]}\n',
+                    file=tmp,
                 )
-                self.this_month += timedelta(days=1)
-            self.this_month = datetime.datetime(self.now.year, self.now.month, 1, hour=0, minute=0, second=0,)
-            row += 1
-            count += 1
+            tmp.seek(0)
+            g2smart_section.text(tmp.read())
 
-    def pick_random(self):
-        """returns random member if currently has active shift"""
-        for key in self.fr_team:
-            if (
-                    self.shifts[self.fr_team[key][self.today]][0]
-                    <= self.current_time2
-                    < self.shifts[self.fr_team[key][self.today]][1]
-            ):
-                self.rnd.append(key)
-        return random.choice(self.rnd)
+        # Section Images
+        # g2smart_section.addImage("http://i.imgur.com/c4jt321l.png")
 
+        # Add section to the connector card object before sending
+        teams_post.addSection(g2smart_section)
+        teams_post.text("G2 Open Alerts")
+        self.dic = {}
 
-P = Planner()
-P.fetch_schedule()
-print(P.pick_random())
-# pprint(p.fr)
+        with open("temp.txt", "r+") as read_obj:
+            one_char = read_obj.read(1)
+            if not one_char:
+                print("empty")
+            else:
+                teams_post.send()
+
+s = G2SmartBot()
+s.location = "TE61"
+s.parse_url()
+s.send_to_teams()
