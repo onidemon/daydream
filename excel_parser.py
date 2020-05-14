@@ -29,6 +29,8 @@ class Planner:
             "12-21": (datetime.time(12, 0, 0), datetime.time(21, 0, 0)),
             "10-14": (datetime.time(10, 0, 0), datetime.time(14, 0, 0)),
             "15-21": (datetime.time(15, 0, 0), datetime.time(21, 0, 0)),
+            "9-13": (datetime.time(9, 0, 0), datetime.time(13, 0, 0)),
+            "9-16": (datetime.time(9, 0, 0), datetime.time(16, 0, 0)),
             "DO": (datetime.time(0, 0, 0), datetime.time(0, 0, 0)),
             "CO": (datetime.time(0, 0, 0), datetime.time(0, 0, 0)),
         }
