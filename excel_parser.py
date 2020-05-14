@@ -4,13 +4,14 @@ import datetime
 from datetime import timedelta
 import random
 from openpyxl import load_workbook
+# from pprint import pprint
 
 
 class Planner:
     """gets team schedule from excel file and picks random active member"""
     def __init__(self):
         self.workbook = load_workbook(
-            filename="/Users/adriansultu/vscodeprojects/learn_python/May.xlsx"
+            filename="C:\\vsprojects\\total\\g2\\May.xlsx"
         )
         self.sheet = self.workbook.active
         self.rnd = []
@@ -18,7 +19,7 @@ class Planner:
             hour=0, minute=0, second=0, microsecond=0
         )
         self.now = datetime.datetime.now()
-        self.this_month = datetime.datetime(2020, 5, 1, hour=0, minute=0, second=0,)
+        self.this_month = datetime.datetime(self.now.year, self.now.month, 1, hour=0, minute=0, second=0,)
         self.current_time = datetime.time(
             self.now.hour, self.now.minute, self.now.second
         )
@@ -39,35 +40,65 @@ class Planner:
             self.sheet["D13"].value: {},
             self.sheet["D14"].value: {},
         }
+        self.nl_team = {
+            self.sheet["D28"].value: {},
+            self.sheet["D29"].value: {},
+            self.sheet["D30"].value: {},
+        }
+        self.de_team = {
+            self.sheet["D33"].value: {},
+            self.sheet["D34"].value: {},
+        }
 
     def fetch_schedule(self):
         """fill dict from excel sheet"""
         row = 9
+        team = self.fr_team
         count = 0
-        while row < 15:
+
+        while True:
+            if row == 35:
+                break
+            elif row == 15:
+                row, team = 28, self.nl_team
+            elif row == 31:
+                row, team = 33, self.de_team
+
             data = self.sheet["E" + str(row):"AI" + str(row)][0]
             for i in data:
-                self.fr_team[self.sheet["D" + str(row)].value].update(
+                team[self.sheet["D" + str(row)].value].update(
                     {self.this_month: i.value}
                 )
                 self.this_month += timedelta(days=1)
-            self.this_month = datetime.datetime(2020, 5, 1, hour=0, minute=0, second=0,)
+            self.this_month = datetime.datetime(self.now.year, self.now.month, 1, hour=0, minute=0, second=0,)
             row += 1
             count += 1
 
-    def pick_random(self):
+    def daily_schedule(self, team):
+        """returns schedule for today"""
+        try:
+            for key in team:
+                print(key, team[key][self.today])
+        except KeyError:
+            print('')
+
+    def pick_random(self, team):
         """returns random member if currently has active shift"""
-        for key in self.fr_team:
-                if (
-                        self.shifts[self.fr_team[key][self.today]][0]
-                        <= self.current_time2
-                        < self.shifts[self.fr_team[key][self.today]][1]
-                ):
-                    self.rnd.append(key)
+        for key in team:
+            if (
+                    self.shifts[team[key][self.today]][0]
+                    <= self.current_time
+                    < self.shifts[team[key][self.today]][1]
+            ):
+                self.rnd.append(key)
         return random.choice(self.rnd)
 
-
-P = Planner()
-P.fetch_schedule()
-print(P.pick_random())
-# pprint(p.fr)
+# P = Planner()
+# P.fetch_schedule()
+# P.daily_schedule(P.fr_team)
+# print('-'*35)
+# P.daily_schedule(P.nl_team)
+# print('-'*35)
+# P.daily_schedule(P.de_team)
+# print('-'*35)
+# print(P.pick_random())
