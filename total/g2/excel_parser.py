@@ -135,7 +135,7 @@ class Planner:
         with open(self.path, 'r') as tmp:
             shifts_section.text(tmp.read())
 
-        shifts_section.linkButton("Open Excel", r"\\10.140.1.47\productions\TOTAL-EV-CHARGE-BUCAREST\Conseillers clients\Actus Briefs\Planning\Planning May.xlsx")
+        # shifts_section.linkButton()
         # Section Images
         # g2smart_section.addImage("http://i.imgur.com/c4jt321l.png")
 
